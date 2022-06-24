@@ -164,6 +164,12 @@ options:
     type: bool
     default: no
     version_added: '3.4.0'
+  popen:
+    description:
+    - just for tests
+    type: bool
+    default: no
+    version_added: '3.4.0'
 
 seealso:
 - module: community.mysql.mysql_info
@@ -334,6 +340,8 @@ executed_commands:
 import os
 import subprocess
 import traceback
+# import gzip
+from shlex import split as shlex_split
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.community.mysql.plugins.module_utils.database import mysql_quote_identifier
@@ -370,7 +378,7 @@ def db_dump(module, host, user, password, db_name, target, all_databases, port,
             single_transaction=None, quick=None, ignore_tables=None, hex_blob=None,
             encoding=None, force=False, master_data=0, skip_lock_tables=False,
             dump_extra_args=None, unsafe_password=False, restrict_config_file=False,
-            check_implicit_admin=False, pipefail=False):
+            check_implicit_admin=False, pipefail=False, popen=False):
     cmd = module.get_bin_path('mysqldump', True)
     # If defined, mysqldump demands --defaults-extra-file be the first option
     if config_file:
@@ -436,6 +444,45 @@ def db_dump(module, host, user, password, db_name, target, all_databases, port,
         path = module.get_bin_path('bzip2', True)
     elif os.path.splitext(target)[-1] == '.xz':
         path = module.get_bin_path('xz', True)
+
+    ## Version with Popen + GZIP module    
+    # if popen:
+    #     p1 = subprocess.Popen(shlex_split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    #     with gzip.open(shlex_quote(target), 'wb', compresslevel=5) as f:
+    #         stdout, stderr = p1.communicate()
+    #         f.write(stdout)
+    #         p1.wait()
+
+    #     if p1.returncode != 0:
+    #         return p1.returncode, '', to_native(stderr)
+    #     else:
+    #         return 0, 'Dump done', ''
+
+    # Version with shell
+    if popen:
+        compress_cmd = [module.get_bin_path('gzip', True), ' > ', shlex_quote(target)]
+        p1 = subprocess.Popen(shlex_split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p2 = subprocess.Popen(compress_cmd, stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        stdout1, stderr1 = p1.communicate()
+        stdout2, stderr2 = p2.communicate()
+
+        if p1.returncode != 0:
+            return p1.returncode, '', to_native(stderr1)
+        else:
+            return p2.returncode, stdout2, to_native(stderr2)
+
+    # Version with run_command
+    # Je pense que ceci ne marchera pas car run_command ferme les fichiers. donc impossible de pipe p1 sur p2
+    # if popen:
+    #     compress_cmd = [module.get_bin_path('gzip', True), ' > ', shlex_quote(target)]
+    #     p1 = subprocess.Popen(shlex_split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #     rc2, stdout2, stderr2 = module.run_command(compress_cmd, data=p1.stdout.read(), binary_data=True, use_unsafe_shell=True)
+
+    #     if p1.returncode != 0:
+    #         return p1.returncode, '', to_native(stderr1)
+    #     else:
+    #         return rc2, stdout2, to_native(stderr2)
 
     if path:
         cmd = '%s | %s > %s' % (cmd, path, shlex_quote(target))
@@ -592,6 +639,7 @@ def main():
         config_overrides_defaults=dict(type='bool', default=False),
         chdir=dict(type='path'),
         pipefail=dict(type='bool', default=False),
+        popen=dict(type='bool', default=False),
     )
 
     module = AnsibleModule(
@@ -642,6 +690,7 @@ def main():
     config_overrides_defaults = module.params['config_overrides_defaults']
     chdir = module.params['chdir']
     pipefail = module.params['pipefail']
+    popen = module.params['popen']
 
     if chdir:
         try:
@@ -728,7 +777,7 @@ def main():
                                      ssl_ca, single_transaction, quick, ignore_tables,
                                      hex_blob, encoding, force, master_data, skip_lock_tables,
                                      dump_extra_args, unsafe_login_password, restrict_config_file,
-                                     check_implicit_admin, pipefail)
+                                     check_implicit_admin, pipefail, popen)
         if rc != 0:
             module.fail_json(msg="%s" % stderr)
         module.exit_json(changed=True, db=db_name, db_list=db, msg=stdout,
