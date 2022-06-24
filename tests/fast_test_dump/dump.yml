@@ -1,0 +1,89 @@
+---
+# Playbook to test mysqldump and gzip
+
+- name: dump
+  hosts: all
+  gather_facts: false
+  tasks:
+
+    - name: Create db2
+      community.mysql.mysql_db:
+        state: present
+        name:
+          - db1
+          - db2
+
+    - name: Create views v1 and v2
+      community.mysql.mysql_query:
+        query:
+          - "CREATE TABLE IF NOT EXISTS db1.t1 (id int)"
+          - "CREATE VIEW IF NOT EXISTS db2.v1 AS SELECT id from db1.t1"
+
+    # Time: 2.1s
+    - name: OK full dump
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/01-full-ok.sql
+
+    # Time: 2.6s
+    - name: OK full dump gzip
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/02-full-ok.sql.gz
+
+    # Time: 2.73s
+    - name: OK full dump gzip pipefail
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/03-full-ok-pipefail.sql.gz
+        pipefail: true
+
+    # Popen + gzip module: 2.61s
+    - name: OK full dump gzip popen + gzip module
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/04-full-ok-popen-gzip-mod.sql.gz
+        popen: true
+
+    - name: Remove db1.t1
+      community.mysql.mysql_query:
+        query:
+          - "DROP TABLE IF EXISTS db1.t1"
+
+    # Time: 2.21s
+    - name: KO full dump
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/11-full-ko.sql
+      ignore_errors: true
+
+    # Time: 2.46s
+    - name: KO full dump gzip
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/12-full-ko.sql.gz
+      ignore_errors: true
+
+    # Time: 2.56s
+    - name: KO full dump gzip pipefail
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/13-full-ko-pipefail.sql.gz
+        pipefail: true
+      ignore_errors: true
+
+    # Time: 2.64
+    - name: KO full dump gzip popen + gzip module
+      community.mysql.mysql_db:
+        state: dump
+        name: all
+        target: /data/14-full-ko-popen-gzip-mod.sql.gz
+        popen: true
+      ignore_errors: true

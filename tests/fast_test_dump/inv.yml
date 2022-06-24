@@ -1,0 +1,6 @@
+---
+all:
+  hosts:
+    db:  # This is available as 'inventory_hostname'
+      ansible_host: db
+      ansible_connection: podman
