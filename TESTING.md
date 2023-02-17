@@ -14,6 +14,8 @@ Everytime you push on your fork or you create a pull request, both workflows run
 
 You can use GitHub to run ansible-test either on the community repo or your fork. But sometimes you want to quickly test a single version or a single target. To do that, you can use the Makefile present at the root of this repository.
 
+Note: If you prefer a TUI, jump to "Test TUI" chapter bellow.
+
 Actually, the makefile only support Podman.
 
 The Makefile accept the following options:
@@ -48,6 +50,22 @@ make ansible="stable-2.14" db_engine_version="mysql:5.7.40" python="3.8" connect
 podman stop -a; podman rm -a; make ansible="stable-2.14" db_engine_version="mysql:5.7.40" python="3.8" connector="pymysql==0.7.10" docker_image="ghcr.io/community.mysql/test-container-my80-py39-mysqlclient203:latest" target="test_mysql_db" keep_containers_alive=1
 ```
 
+
+### Tests TUI
+
+You can't remember all the arguments from the makefile? The TUI will help you choose which test suite to run. For a fast feedback loop, it will memorize your last choice.
+
+To use it, you need the `textual` Python package :
+
+```sh
+pip install textual
+```
+
+Then to run the TUI:
+
+``` sh
+python tests_tui.py
+```
 
 ### Run all tests
 
