@@ -1,0 +1,122 @@
+---
+
+###############
+# Setup test
+
+- name: Issue 358 | Create Linux users
+  delegate_to: localhost
+  debug: var=ansible_fqdn
+
+  # vars:
+  #   ansible_connection: containers.podman.podman
+  # ansible.builtin.user:
+  #   name: "{{ item }}"
+  #   state: present
+  # loop:
+  #   - user_default_file_socket
+  #   - user_default_file_tcp
+  #   - user_socket
+  #   - user_tcp
+
+- name: Issue 358 | Create .my.cnf file
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
+    dest: "{{ item.dest }}"
+    mode: '0400'
+  loop:
+    - content: |
+        [client]
+        socket = /run/mysqld/mysqld.sock
+      dest: /home/user_default_file_socket/.my.cnf
+    - content: |
+        [client]
+        host = {{ mysql_host }}
+        port = {{ mysql_primary_port }}
+      dest: /home/user_default_file_tcp/.my.cnf
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Issue 358 | Create MySQL users
+  community.mysql.mysql_user:
+    user: "{{ item.user | d(omit) }}"
+    host: '%'
+    plugin: "{{ item.plugin | d(omit) }}"
+    password: "{{ item.password | d(omit) }}"
+    priv: '*.*:ALL'
+    login_password: "{{ mysql_password }}"
+    login_host: "{{ mysql_host }}"
+    login_user: "{{ mysql_user }}"
+    login_port: "{{ mysql_primary_port }}"
+  loop:
+    - user: user_default_file_socket
+      plugin: unix_socket
+    - user: user_default_file_tcp
+      plugin: mysql_native_password
+      password: fake234password4test
+    - user: user_socket
+      plugin: unix_socket
+    - user: user_tcp
+      plugin: mysql_native_password
+      password: fake234password4test
+
+- name: Issue 358 | Create a database
+  community.mysql.mysql_db:
+    login_password: "{{ mysql_password }}"
+    login_host: "{{ mysql_host }}"
+    login_user: "{{ mysql_user }}"
+    login_port: "{{ mysql_primary_port }}"
+    name: issue_358
+    state: present
+
+
+###############
+# Tests
+
+# Access by default cred file
+- name: Issue 358 | Dump the database from user_default_file_socket
+  become: true
+  become_user: user_default_file_socket
+  community.mysql.mysql_db:
+    login_host: "{{ mysql_host }}"
+    name: issue_358
+    state: dump
+    target: /tmp/user_default_file_socket.sql
+    pipefail: true
+  register: result
+
+- name: Issue 358 | Assert that user_default_file_socket could dump
+  ansible.builtin.assert:
+    that:
+      - result is succeeded
+
+###############
+# Cleanup
+- name: Issue 358 | Cleanup Linux users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - user_default_file_socket
+    - user_default_file_tcp
+    - user_socket
+    - user_tcp
+
+- name: Issue 358 | Cleanup MySQL users
+  ansible.builtin.mysql_user:
+    user: "{{ item }}"
+    host_all: true
+    state: absent
+  loop:
+    - user_default_file_socket
+    - user_default_file_tcp
+    - user_socket
+    - user_tcp
+
+- name: Issue 358 | Cleanup database
+  community.mysql.mysql_db:
+    login_password: "{{ mysql_password }}"
+    login_host: "{{ mysql_host }}"
+    login_user: "{{ mysql_user }}"
+    login_port: "{{ mysql_primary_port }}"
+    name: issue_358
+    state: absent

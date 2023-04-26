@@ -92,6 +92,10 @@ test-integration:
 	python$(local_python_version) -m ensurepip; \
 	python$(local_python_version) -m pip install --disable-pip-version-check \
 	https://github.com/ansible/ansible/archive/$(ansible).tar.gz; \
+	mkdir -p .venv/$(ansible)/lib/python$(python)/site-packages/ansible_collections; \
+	ansible-galaxy collection install containers.podman \
+	  --collections-path=.venv/$(ansible)/lib/python$(python)/site-packages/ansible_collections; \
+	export ANSIBLE_COLLECTIONS_PATH=.venv/$(ansible)/lib/python$(python)/site-packages/ansible_collections; \
 	set -x; \
 	ansible-test integration $(target) -v --color --coverage --diff \
 	--docker ghcr.io/ansible-collections/community.mysql/test-container\
