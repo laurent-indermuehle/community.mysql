@@ -91,6 +91,36 @@ EXAMPLES = r'''
     - INSERT INTO articles (id, story) VALUES (2, 'my_long_story')
     - INSERT INTO prices (id, price) VALUES (123, '100.00')
     single_transaction: true
+
+- name: PART 1 - Select all accounts with access to one of the databases
+  community.mysql.mysql_query:
+    query: >-
+        SELECT CONCAT(DB.User, '@\'', DB.Host, '\'') AS User
+        FROM mysql.db DB
+        WHERE DB.Db = '{{ item }}'
+  loop: ['db1', 'db2']
+  register: accounts_complex_data_structure
+
+- name: PART 2 - Loop over results of each database and extract the accounts
+  ansible.builtin.set_fact:
+    accounts_to_delete: >-
+      {{ accounts_to_delete | default([])
+        + item.query_result.0 | map(attribute='User')
+      }}
+  loop: "{{ accounts_complex_data_structure.results }}"
+  when:
+    - item.rowcount.0 > 0
+
+- name: PART 3 - Delete all accounts
+  community.mysql.mysql_query:
+    query: DELETE USER IF EXISTS {{ item }}
+  loop: "{{ accounts_to_delete }}"
+  vars:
+    accounts_to_keep:
+      - root@localhost
+      - mysql@localhost
+  when:
+    - item not in accounts_to_keep
 '''
 
 RETURN = r'''
