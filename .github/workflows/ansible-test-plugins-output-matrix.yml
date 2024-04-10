@@ -174,7 +174,7 @@ jobs:
       matrix: ${{ steps.step-generate-matrix.outputs.matrix }}
 
   job-display-matrix:
-    needs: generate-matrix
+    needs: job-generate-matrix
     runs-on: ubuntu-22.04
     steps:
       - name: Display Matrix
