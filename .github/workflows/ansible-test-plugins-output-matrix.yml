@@ -167,6 +167,4 @@ jobs:
 
       - name: Generate Matrix
         id: generate-matrix
-        run: |
-          # Generate the matrix here
-          echo "::set-output name=matrix::${MATRIX}"
+        run: echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
