@@ -166,6 +166,16 @@ jobs:
     steps:
 
       - name: Generate Matrix
+        id: generate-matrix
         run: |
           echo "matrix=${{ toJSON(matrix) }}" >> $GITHUB_OUTPUT
-          cat $GITHUB_OUTPUT
+
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+
+  display-matrix:
+    needs: generate-matrix
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Display Matrix
+        run: echo "${{ needs.generate-matrix.outputs.matrix }}"
