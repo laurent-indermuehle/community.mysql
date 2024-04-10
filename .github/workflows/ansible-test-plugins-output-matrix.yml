@@ -11,7 +11,7 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
 
-  generate-matrix:
+  job-generate-matrix:
     name: "Generate the tests matrix"
     runs-on: ubuntu-22.04
     strategy:
@@ -166,16 +166,16 @@ jobs:
     steps:
 
       - name: Generate Matrix
-        id: generate-matrix
+        id: step-generate-matrix
         run: |
           echo "matrix=${{ matrix }}" >> $GITHUB_OUTPUT
 
     outputs:
-      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+      matrix: ${{ steps.step-generate-matrix.outputs.matrix }}
 
-  display-matrix:
+  job-display-matrix:
     needs: generate-matrix
     runs-on: ubuntu-22.04
     steps:
       - name: Display Matrix
-        run: echo "${{ toJSON(needs.generate-matrix.outputs.matrix) }}"
+        run: echo '${{ needs.job-generate-matrix.outputs.matrix }}'
