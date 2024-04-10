@@ -178,4 +178,4 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Display Matrix
-        run: echo "${{ fromJSON(needs.generate-matrix.outputs.matrix) }}"
+        run: echo "${{ needs.generate-matrix.outputs.matrix }}"
