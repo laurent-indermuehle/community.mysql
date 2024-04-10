@@ -167,5 +167,5 @@ jobs:
 
       - name: Generate Matrix
         run: |
-          echo "matrix=${{ matrix }}" >> $GITHUB_OUTPUT
+          echo "matrix=${{ toJSON(matrix) }}" >> $GITHUB_OUTPUT
           cat $GITHUB_OUTPUT
