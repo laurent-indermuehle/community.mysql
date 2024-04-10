@@ -166,5 +166,6 @@ jobs:
     steps:
 
       - name: Generate Matrix
-        id: generate-matrix
-        run: echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+        run: |
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
